@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Registration
+{% endblock %}
+
+
+{% block body %}
+    <div>
+        <h1 style="text-align: center">Redditto</h1>
+    </div>
+    <div style="width: 15%">
+        <div name="message">
+        {% if message %}
+            {{ message }}
+        {% endif %}
+        </div>
+        <h1 style="text-align: center">Register</h1>
+        <form action="{{ url_for('checkregister') }}" method="post">
+            username <br/>
+            <input name="username" type="text"/>
+            <br/>
+            password <br/>
+            <input name="password1" type="password"/>
+            <br/>
+            re-enter password <br/>
+            <input name="password2" type="password"/>
+            <br/>
+            <input type="submit" value="Register"/>
+        </form>
+    </div>
+{% endblock %}

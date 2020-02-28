@@ -1,0 +1,172 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block head %}
+    <script>
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+        function commentvote(id, dir){
+            if (dir > 0){
+                var color = "green";
+                var str = "up";
+            }else if (dir < 0 ){
+                var color = "red";
+                var str = "down";
+            }
+            document.getElementById("comment" + id + str).style.color = color;
+            socket.emit("commentvote", {"id": id, "dir": dir});
+        }
+        function postvote(id, dir){
+            if (dir > 0){
+                var color = "green";
+                var str = "up";
+            }else if (dir < 0 ){
+                var color = "red";
+                var str = "down";
+            }
+            document.getElementById("post" + id + str).style.color = color;
+            socket.emit("postvote", {"id": id, "dir": dir});
+        }
+        socket.on("loggedin", data => {
+            var text =
+                `<h3 style="text-align: center"> Welcome ${ data.username } </h3><br/>
+                <form action="{{ url_for('logout') }}">
+                <input type="submit" value="Log out">
+                </form>`;
+            document.getElementById("userareas").innerHTML = text;
+            document.getElementById("commentbutton").setAttribute("onclick", "commentSubmit('True')")
+            document.getElementById("notloggedin").innerHTML=""
+        });
+        function commentSubmit(loggedin){
+            if(loggedin == "True"){
+                document.getElementById('commentBox').style.display = "block";
+                document.getElementsByName('parent')[0].value = "NULL";
+                document.getElementsByName('level')[0].value = 0;
+            } else{
+                document.getElementById("notloggedin").innerHTML="You must be logged in to comment!"
+            }
+        }
+        function reply(parent, level){
+            document.getElementById('commentBox').style.display = "block";
+            document.getElementsByName('parent')[0].value = parent;
+            document.getElementsByName('level')[0].value = level + 1;
+        }
+
+        function level0Comments(comments){
+            var commentSection = document.getElementById("commentSection");
+            for(var i = 0; i < comments.length; ++i){
+                var outdiv = document.createElement("div");
+                var div = document.createElement("div");
+                div.setAttribute("style", "border-style: solid; width: 95%; float: right");
+                comment = comments[i]
+                outdiv.id = comment[0];
+                div.innerHTML = `<i onclick="commentvote(${comment[0]}, 1)" id="comment${comment[0]}up" class="material-icons up" style="cursor: pointer">arrow_upward</i>`
+                div.innerHTML += `<i onclick="commentvote(${comment[0]}, -1)" id="comment${comment[0]}down" class="material-icons down" style="cursor: pointer">arrow_downward</i><br/>`
+                div.innerHTML += `${comment[3] } <br/> <button onclick='reply(${comment[0] }, ${comment[7]})'>Reply</button>`;
+                div.innerHTML += `<br/>Submitted by ${comment[8]} on ${comment[2]} GMC`
+                outdiv.appendChild(div)
+                commentSection.appendChild(outdiv);
+            }
+        }
+        function otherComments(comments){
+            for(var i = 0; i < comments.length; ++i){
+                for(var j = 0; j < comments[i].length; ++j){
+                    comment = comments[i][j]
+                    var parent = document.getElementById(comments[i][j][5])
+                    var outdiv =document.createElement("div");
+                    var div = document.createElement("div");
+                    var indent = 95-comment[7]*5
+                    var style = `border-style: solid; width: ${indent}%; float: right`
+                    div.setAttribute("style", style);
+                    outdiv.id = comment[0];
+                    div.innerHTML = `<i onclick="commentvote(${comment[0]}, 1)" id="comment${comment[0]}up" class="material-icons up" style="cursor: pointer">arrow_upward</i>`
+                    div.innerHTML += `<i onclick="commentvote(${comment[0]}, -1)" id="comment${comment[0]}down" class="material-icons down" style="cursor: pointer">arrow_downward</i><br/>`
+                    div.innerHTML += `${comment[3]} <br/> <button onclick='reply(${comment[0]}, ${comment[7]})'>Reply</button>`;
+                    div.innerHTML += `<br/>Submitted by ${comment[8]} on ${comment[2]} GMC`
+                    outdiv.appendChild(div)
+                    parent.appendChild(outdiv);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var comments = {{comments|tojson}};
+            level0Comments(comments.zero);
+            otherComments(comments.rest);
+        });
+
+    </script>
+{% endblock %}
+
+{% block body %}
+    <div>
+        <span id="notloggedin" style="text-align: center"></span>
+    </div>
+    <div>
+        <h1 style="text-align: center">Redditto</h1>
+    </div>
+    <div >
+        <div class="leftblock">
+            {% if loggedin %}
+                <h3 style="text-align: center"> Welcome {{ username }} </h3><br/>
+                <form action="{{ url_for('logout') }}">
+                    <input type="submit" value="Log out">
+                </form>
+            {% else %}
+                <div name="userareas" id="userareas">
+                    <h2 style="text-align: center"> Login</h2>
+                    <form action="{{ url_for('login')}}" method="post">
+                        username<br/>
+                        <input name="username" id="username" type="text"/>
+                        <br/>
+                        password<br/>
+                        <input name="password" id="password" type="password"/>
+                        <br/>
+                        <input type="hidden" value="/{{ page }}" name="currentpage">
+                        <input type="submit" value="login">
+                        </form>
+                    <br/>
+                    Don't have an account?
+                    <form action="{{ url_for('register') }}">
+                        <input type="submit" value="Register"/>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+        <div class="centerblock">
+            <div id="commentSection" style="white-space: pre-wrap">
+                <div style="border-style: solid; margin: auto">
+                    <i onclick="postvote({{ post[0] }}, 1)" id="post{{ post[0] }}up" class="material-icons up" style="cursor: pointer">arrow_upward</i>
+                    <i onclick="postvote({{ post[0] }}, -1)" id="post{{ post[0] }}down" class="material-icons down" style="cursor: pointer">arrow_downward</i>
+                    <h2 align="center">{{ post[3] }}</h2>
+                    {% if post[5] %}
+                        <iframe src={{ post[5] }} width="420" height="315" style="margin:auto; display:block"></iframe>
+                        <br/>
+                    {% endif %}
+                    {% if post[6] %}
+                        <img src={{ post[6] }} style="max-width:100%; margin:auto; display:block"/>
+                        <br/>
+                    {% endif %}
+                    {{ post[4] }} <br/>
+                    Submitted by {{ post[8] }} at {{post [2] }} GMC
+                    <br/>
+                    <button id="commentbutton" onclick="commentSubmit('{{ loggedin }}')">Comment</button>
+                </div>
+            </div>
+        </div>
+        <div id="commentBox" class="leftblock" style="display:none">
+            <form method="post" action="{{ url_for('makecomment') }}">
+                <h3>Write a Comment</h3>
+                <br/>
+                <input type="hidden" value="" name="level">
+                <input type="hidden" value="" name="parent">
+                <input type="hidden" value={{ post[0] }} name="post">
+                <textarea name="body" style="width: 100%; resize:none" rows="5" type="text"></textarea>
+                <br/>
+                <input type="submit" value="submit"/>
+            </form>
+        </div>
+    </div>
+{% endblock %}

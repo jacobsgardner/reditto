@@ -1,0 +1,104 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Redditto
+{% endblock %}
+
+{% block head %}
+    <style>
+    </style>
+    <script>
+        function comments(id){
+            window.location.href = "comments/"+id;
+        }
+        socket.on("loggedin", data => {
+            var text =
+                `<h3 style="text-align: center"> Welcome ${ data.username } </h3><br/>
+                <form action="{{ url_for('logout') }}">
+                <input type="submit" value="Log out">
+                </form>`;
+            document.getElementById("userareas").innerHTML = text;
+        });
+    </script>
+
+{% endblock %}
+
+{% block body %}
+    <div >
+        <h1 style="text-align: center">Redditto</h1>
+    </div>
+    <div style="clear:both; width: 100%">
+        <div class="leftblock">
+            {% if loggedin %}
+                <h3 style="text-align: center"> Welcome {{ username }} </h3><br/>
+                <form action="{{ url_for('logout') }}">
+                    <input type="submit" value="Log out">
+                </form>
+            {% else %}
+                <div name="userareas" id="userareas">
+                    <h2 style="text-align: center"> Login</h2>
+                    <form action="{{ url_for('login')}}" method="post">
+                        username<br/>
+                        <input name="username" id="username" type="text"/>
+                        <br/>
+                        password<br/>
+                        <input name="password" id="password" type="password"/>
+                        <br/>
+                        <input type="hidden" value="/{{ page }}" name="currentpage">
+                        <input type="submit" value="login">
+                        </form>
+                    <br/>
+                    Don't have an account?
+                    <form action="{{ url_for('register') }}">
+                        <input type="submit" value="Register"/>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+        <div class="centerblock">
+            {% for post in posts %}
+                <div style="border-style: solid; cursor: pointer; white-space: pre-wrap" onclick="comments({{ post[0] }})">
+                    <i onclick="postvote({{ post[0] }}, 1); event.stopPropagation();" id="post{{ post[0] }}up" class="material-icons up" style="cursor: pointer">arrow_upward</i>
+                    <i onclick="postvote({{ post[0] }}, -1); event.stopPropagation();" id="post{{ post[0] }}down" class="material-icons down" style="cursor: pointer">arrow_downward</i>
+                    <h2 align="center">{{ post[3] }}</h2>
+                    {% if post[5] %}
+                        <iframe src={{ post[5] }} width="420" height="315" style="margin: auto; display:block"></iframe>
+                        <br/>
+                    {% endif %}
+                    {% if post[6] %}
+                        <img src={{ post[6] }} style="max-width:100%; margin:auto; display:block"/>
+                        <br/>
+                    {% endif %}
+                    {{ post[4] }} <br/>
+                    Submitted by {{ post[8] }} at {{post [2] }} GMC
+                </div>
+                <br/>
+            {% endfor %}
+        </div>
+        {% if loggedin %}
+            <div class="rightblock">
+                <form method="post" action="{{ url_for('makepost') }}">
+                    <h2>Make a Post</h3>
+                    Title: <br/>
+                    <input type="text" name="title"/>
+                    <br/>
+                    <textarea name="body" style="width: 100%; resize:none" rows="5" type="text"></textarea>
+                    <br/>
+                    Post a Video: <br/>
+                    <input type="text" name="video_link" style="width: 100%"/>
+                    <br/>
+                    Post an Image: <br/>
+                    <input type="text" name="image_link" style="width: 100%"/>
+                    <br/>
+                    <input type="submit" value="Submit"/>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+    <div style="position: fixed; bottom: 0%; margin: auto; width: 100%">
+        {% if page != 0 %}
+            <a href="/{{ (page-1)|int }}">Back</a>
+        {% endif %}
+            <a href="/{{ (page+1)|int }}">Next</a>
+    </div>
+{% endblock %}
